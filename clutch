@@ -7,11 +7,7 @@ set -e
 CLUTCH_DIR="${CLUTCH_DIR:-$HOME/.clutch}"
 VERSION="1.0.0"
 
-# Colors
-CYAN='\033[0;36m'
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-RED='\033[0;31m'
+# Colors (minimal, like Claude Code)
 BOLD='\033[1m'
 DIM='\033[2m'
 NC='\033[0m'
@@ -28,7 +24,7 @@ Clutch - AI-powered file description generator for GitHub repositories
 
 Commands:
   init <repo-url>         Initialize a new repository for processing
-  run [project]           Process files with AI workers (prompts if multiple projects exist)
+  run [project]           Process files with AI workers
   status                  Show all projects and their progress
   uninstall               Remove clutch from your system
   help                    Display help for command
@@ -42,7 +38,7 @@ Examples:
   clutch status
   clutch run react
 
-Learn more: https://github.com/user/clutch
+Learn more: https://github.com/michaelsayman/clutch
 EOF
 }
 
@@ -50,8 +46,13 @@ cmd_init() {
     local REPO_URL="$1"
 
     if [ -z "$REPO_URL" ]; then
-        echo -e "${RED}Error: Repository URL required${NC}"
-        echo -e "Usage: clutch init <repo-url>\n"
+        echo "ERROR: Repository URL required" >&2
+        echo "" >&2
+        echo "Usage: clutch init <repo-url>" >&2
+        echo "" >&2
+        echo "Example:" >&2
+        echo "  clutch init https://github.com/facebook/react" >&2
+        echo "" >&2
         exit 1
     fi
 
@@ -62,21 +63,24 @@ cmd_init() {
     local PROJECT_DIR="$CLUTCH_DIR/projects/$REPO_NAME"
 
     echo ""
-    echo "Initializing repository: ${BOLD}$REPO_NAME${NC}"
+    echo "${BOLD}Initializing repository${NC}"
+    echo ""
+    echo "Repository: $REPO_NAME"
+    echo "URL: $REPO_URL"
     echo ""
 
     mkdir -p "$PROJECT_DIR"
 
     # Clone or update repo
     if [ -d "$REPO_DIR" ]; then
-        echo "Using existing repository clone"
+        echo "→ Using existing repository clone"
     else
-        echo "Cloning repository..."
+        echo "→ Cloning repository..."
         git clone "$REPO_URL" "$REPO_DIR" 2>&1 | grep -E "(Cloning|done)" || true
     fi
 
     # Find files
-    echo "Analyzing files..."
+    echo "→ Analyzing files..."
     find "$REPO_DIR" -type f \
         ! -path "*/node_modules/*" ! -path "*/.git/*" ! -path "*/dist/*" \
         ! -path "*/build/*" ! -path "*/.next/*" ! -path "*/coverage/*" \
@@ -85,10 +89,9 @@ cmd_init() {
         ! -name "*.map" ! -name "*.log" > "$PROJECT_DIR/all_files.txt"
 
     local TOTAL_FILES=$(wc -l < "$PROJECT_DIR/all_files.txt" | tr -d ' ')
-    echo "Found $TOTAL_FILES files"
 
     # Count LOC
-    echo "Counting lines of code..."
+    echo "→ Counting lines of code..."
     local TOTAL_LOC=0
     > "$PROJECT_DIR/file_stats.txt"
 
@@ -101,15 +104,8 @@ cmd_init() {
         fi
     done < "$PROJECT_DIR/all_files.txt"
 
-    echo "Total lines: $(printf "%'d" $TOTAL_LOC)"
-
-    # Generate context
-    echo "Generating project context..."
+    echo "→ Generating project context..."
     claude --dangerously-skip-permissions -p "Analyze repository at $REPO_DIR and create PROJECT_CONTEXT.md at $PROJECT_DIR/PROJECT_CONTEXT.md with: project purpose, architecture, technologies, repo structure, main features. Then append 'SUCCESS' to $PROJECT_DIR/init_log.txt and EXIT." 2>/dev/null || true
-
-    if [ -f "$PROJECT_DIR/PROJECT_CONTEXT.md" ]; then
-        echo "✓ Context generated"
-    fi
 
     # Initialize files
     > "$PROJECT_DIR/completed.txt"
@@ -129,9 +125,15 @@ cmd_init() {
 EOF
 
     echo ""
-    echo "✅ Initialization complete"
+    echo "✓ Initialization complete"
     echo ""
-    echo "Next: clutch run $REPO_NAME"
+    printf "  Files found: ${BOLD}%s${NC}\n" "$TOTAL_FILES"
+    printf "  Lines of code: ${BOLD}%s${NC}\n" "$(printf "%'d" $TOTAL_LOC)"
+    if [ -f "$PROJECT_DIR/PROJECT_CONTEXT.md" ]; then
+        printf "  Context: ${BOLD}Generated${NC}\n"
+    fi
+    echo ""
+    echo "Next: ${BOLD}clutch run $REPO_NAME${NC}"
     echo ""
 }
 
@@ -141,10 +143,10 @@ cmd_status() {
     echo ""
 
     if [ ! -d "$CLUTCH_DIR/projects" ] || [ -z "$(ls -A "$CLUTCH_DIR/projects" 2>/dev/null)" ]; then
-        echo "No projects found"
+        echo "No projects initialized"
         echo ""
         echo "Initialize a project:"
-        echo "  clutch init <repo-url>"
+        echo "  ${BOLD}clutch init <repo-url>${NC}"
         echo ""
         exit 0
     fi
@@ -155,19 +157,18 @@ cmd_status() {
         local metadata="$CLUTCH_DIR/projects/$project/metadata.json"
         if [ ! -f "$metadata" ]; then continue; fi
 
-        local repo_url=$(jq -r '.repo_url' "$metadata" 2>/dev/null)
         local total=$(jq -r '.total_files' "$metadata" 2>/dev/null)
         local completed=$(wc -l < "$CLUTCH_DIR/projects/$project/completed.txt" 2>/dev/null | tr -d ' ')
         [ -z "$completed" ] && completed=0
 
         local pct=0
-        [ "$total" -gt 0 ] && pct=$(echo "scale=1; $completed * 100 / $total" | bc 2>/dev/null || echo "0")
+        [ "$total" -gt 0 ] && pct=$(echo "scale=0; $completed * 100 / $total" | bc 2>/dev/null || echo "0")
 
-        local status="in progress"
-        [ "$completed" -eq "$total" ] && status="complete"
-        [ "$completed" -eq 0 ] && status="not started"
+        local status_icon="⋯"
+        [ "$completed" -eq "$total" ] && status_icon="✓"
+        [ "$completed" -eq 0 ] && status_icon="○"
 
-        printf "  %-30s %s (%d/%d files, %.0f%%)\n" "$project" "$status" "$completed" "$total" "$pct"
+        printf "  ${status_icon} %-30s %3d%% complete (%d/%d files)\n" "$project" "$pct" "$completed" "$total"
     done
     echo ""
 }
@@ -182,13 +183,18 @@ cmd_run() {
         local projects=($(ls -1 "$CLUTCH_DIR/projects/" 2>/dev/null))
 
         if [ ${#projects[@]} -eq 0 ]; then
-            echo -e "${YELLOW}No projects found. Run: clutch init <repo-url>${NC}"
+            echo "" >&2
+            echo "No projects found" >&2
+            echo "" >&2
+            echo "Initialize a project first:" >&2
+            echo "  clutch init <repo-url>" >&2
+            echo "" >&2
             exit 1
         elif [ ${#projects[@]} -eq 1 ]; then
             project_name="${projects[0]}"
         else
             echo ""
-            echo "Select project:"
+            echo "${BOLD}Select project${NC}"
             echo ""
             for i in "${!projects[@]}"; do
                 local proj="${projects[$i]}"
@@ -201,7 +207,8 @@ cmd_run() {
             if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#projects[@]}" ]; then
                 project_name="${projects[$((choice-1))]}"
             else
-                echo -e "${YELLOW}Invalid selection${NC}"
+                echo "" >&2
+                echo "Invalid selection" >&2
                 exit 1
             fi
         fi
@@ -209,7 +216,12 @@ cmd_run() {
 
     local project_dir="$CLUTCH_DIR/projects/$project_name"
     if [ ! -d "$project_dir" ]; then
-        echo -e "${RED}Project '$project_name' not found${NC}"
+        echo "" >&2
+        echo "ERROR: Project '$project_name' not found" >&2
+        echo "" >&2
+        echo "Available projects:" >&2
+        ls -1 "$CLUTCH_DIR/projects/" 2>/dev/null | sed 's/^/  /' >&2
+        echo "" >&2
         exit 1
     fi
 
@@ -222,7 +234,7 @@ run_processor() {
     local project_name="$2"
 
     echo ""
-    echo "Processing: ${BOLD}$project_name${NC}"
+    echo "${BOLD}Processing: $project_name${NC}"
     echo ""
 
     local total=$(wc -l < "$project_dir/all_files.txt" | tr -d ' ')
@@ -230,17 +242,26 @@ run_processor() {
     [ -z "$done" ] && done=0
     local remaining=$((total - done))
 
-    echo "Progress: $done/$total files ($remaining remaining)"
+    local pct=0
+    [ "$total" -gt 0 ] && pct=$(echo "scale=0; $done * 100 / $total" | bc 2>/dev/null || echo "0")
+
+    printf "Progress: ${BOLD}%d%%${NC} (%d/%d files, %d remaining)\n" "$pct" "$done" "$total" "$remaining"
     echo ""
 
     if [ "$remaining" -eq 0 ]; then
         echo "✓ All files processed"
+        echo ""
         exit 0
     fi
 
     # Worker selection
     echo "Select worker count:"
-    echo "  1) 10 workers    2) 20 workers    3) 30 workers    4) 40 workers    5) 50 workers"
+    echo ""
+    echo "  1) 10 workers     ${DIM}(slower, lower API usage)${NC}"
+    echo "  2) 20 workers     ${DIM}(balanced)${NC}"
+    echo "  3) 30 workers     ${DIM}(faster)${NC}"
+    echo "  4) 40 workers     ${DIM}(high speed)${NC}"
+    echo "  5) 50 workers     ${DIM}(maximum speed)${NC}"
     echo ""
     read -p "Choice [1-5]: " choice
     local workers=20
@@ -250,15 +271,17 @@ run_processor() {
 
     # Continue or restart?
     if [ "$done" -gt 0 ]; then
+        echo ""
         read -p "Continue from checkpoint? [Y/n]: " cont
         if [[ "$cont" =~ ^[Nn] ]]; then
             > "$project_dir/completed.txt"
             > "$project_dir/descriptions.jsonl"
+            echo "✓ Progress reset"
         fi
     fi
 
     echo ""
-    echo "Starting $workers workers..."
+    echo "→ Starting $workers workers..."
     echo ""
 
     # Process files
@@ -268,9 +291,9 @@ run_processor() {
     echo "$pending" | xargs -P "$workers" -I {} bash -c 'clutch --worker "{}"'
 
     echo ""
-    echo "✅ Processing complete"
+    echo "✓ Processing complete"
     echo ""
-    echo "Output: $project_dir/descriptions.jsonl"
+    echo "Output: ${BOLD}$project_dir/descriptions.jsonl${NC}"
     echo ""
 }
 
@@ -281,8 +304,6 @@ cmd_worker() {
     [ -z "$project_dir" ] && exit 1
     grep -Fxq "$file" "$project_dir/completed.txt" 2>/dev/null && exit 0
 
-    local short="${file#$CLUTCH_DIR/repos/}"
-
     claude --dangerously-skip-permissions -p "Analyze ONE file from a code repository. Read $project_dir/PROJECT_CONTEXT.md for context, then read $file. Write a 2-5 sentence description (MAX 400 chars) explaining what it does, its role in the architecture, and key functionality. Append ONE JSON line to $project_dir/descriptions.jsonl: {\"file\":\"$file\",\"desc\":\"description\"}. Append file path to $project_dir/completed.txt. EXIT immediately." 2>/dev/null || true
 
     echo "$file" >> "$project_dir/completed.txt"
@@ -290,23 +311,23 @@ cmd_worker() {
 
 cmd_uninstall() {
     echo ""
-    echo "Uninstalling Clutch..."
+    echo "${BOLD}Uninstalling Clutch${NC}"
     echo ""
 
     # Remove binary
     if [ -f "$HOME/.local/bin/clutch" ]; then
-        echo "Removing binary..."
+        echo "→ Removing binary..."
         rm -f "$HOME/.local/bin/clutch"
     fi
 
     # Remove data
     if [ -d "$CLUTCH_DIR" ]; then
-        echo "Removing data..."
+        echo "→ Removing data..."
         rm -rf "$CLUTCH_DIR"
     fi
 
     echo ""
-    echo "✅ Clutch uninstalled"
+    echo "✓ Clutch uninstalled"
     echo ""
 }
 
