@@ -8,7 +8,7 @@ import { runCommand } from './commands/run.js';
 import { statusCommand } from './commands/status.js';
 import { uninstallCommand } from './commands/uninstall.js';
 
-const VERSION = '1.1.4';
+const VERSION = '1.1.6';
 
 const LOGO = `
  ██████╗██╗     ██╗   ██╗████████╗ ██████╗██╗  ██╗

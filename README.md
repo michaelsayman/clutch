@@ -41,8 +41,8 @@ clutch help               Show help message
 ## How It Works
 
 1. **Initialize**: Clone any repo, analyze structure, generate PROJECT_CONTEXT.md with architecture overview
-2. **Process**: Launch parallel Claude Code workers to describe each file (max 400 chars)
-3. **Output**: Get descriptions.jsonl with every file documented
+2. **Process**: Launch concurrent Claude Code CLI instances (workers) to analyze each file in parallel with codebase exploration
+3. **Output**: Get descriptions.jsonl with every file documented (max 400 chars per file)
 
 All data lives in `~/clutch/` (easy to access!):
 ```
@@ -75,7 +75,7 @@ clutch status
 clutch run react
 
 # View results
-cat ~/.clutch/projects/react/descriptions.jsonl | jq
+cat ~/clutch/projects/react/descriptions.jsonl | jq
 
 # Process another repo
 clutch init https://github.com/vercel/next.js
@@ -87,11 +87,13 @@ open ~/clutch/projects/
 
 ## Worker Options
 
-When processing, choose worker count:
-- **10** workers - Slower, lower API usage
-- **20** workers - Balanced (default)
-- **30** workers - Faster, higher API usage
-- **40-50** workers - Maximum speed
+Each worker is a separate Claude Code CLI instance running concurrently. When processing, choose how many parallel instances to run:
+- **10** workers - 10 concurrent Claude Code instances, slower but lower API usage
+- **20** workers - 20 concurrent instances, balanced approach
+- **30** workers - 30 concurrent instances, faster processing
+- **40-50** workers - 40-50 concurrent instances, maximum speed (high API usage)
+
+Workers continuously process files from the queue until all files are analyzed.
 
 ## Resume Support
 

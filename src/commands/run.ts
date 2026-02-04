@@ -108,8 +108,8 @@ export async function runCommand(projectName?: string) {
   const processFile = async (filePath: string): Promise<void> => {
     console.log(chalk.dim(`  Starting: ${filePath.substring(filePath.lastIndexOf('/') + 1)}`));
     try {
-      // Simple prompt without massive context
-      const prompt = `Read and analyze the file at ${filePath}. Provide a detailed description (MAXIMUM 400 characters) covering: what it does, its purpose, key functionality, and role in the system. Be thorough and specific. Return ONLY the description text, nothing else.`;
+      // Thorough prompt with exploration
+      const prompt = `Analyze the file at ${filePath} in the repository at ${repoDir}. Use the explore, grep, and read tools to understand how this file relates to other files in the codebase. Provide a thorough, detailed, and elaborate description (MAXIMUM 400 characters) that explains: what it does, its purpose, key functionality, how it connects to other files, its role in the architecture, and any important patterns or relationships. Be comprehensive and use all available context. Return ONLY the description text, nothing else.`;
 
       const result = await execa('claude', [
         '--dangerously-skip-permissions',
@@ -146,16 +146,28 @@ export async function runCommand(projectName?: string) {
     }
   };
 
-  // Process files in batches with concurrency control
-  console.log(chalk.dim(`\nProcessing ${remainingFiles.length} files in batches of ${workerCount}...`));
+  // Process files with worker pool - maintain exactly workerCount concurrent workers
+  console.log(chalk.dim(`\nProcessing ${remainingFiles.length} files with ${workerCount} concurrent workers...`));
   console.log(chalk.dim(`First file: ${remainingFiles[0]}`));
+  console.log();
 
-  for (let i = 0; i < remainingFiles.length; i += workerCount) {
-    const batch = remainingFiles.slice(i, i + workerCount);
-    console.log(chalk.dim(`\nBatch ${Math.floor(i / workerCount) + 1}: Processing ${batch.length} files...`));
-    await Promise.all(batch.map(processFile));
-    console.log(chalk.dim(`Batch ${Math.floor(i / workerCount) + 1} complete`));
+  // Create a worker pool that maintains constant concurrency
+  let fileIndex = 0;
+  const workers: Promise<void>[] = [];
+
+  for (let i = 0; i < workerCount; i++) {
+    const worker = (async () => {
+      while (fileIndex < remainingFiles.length) {
+        const currentIndex = fileIndex++;
+        if (currentIndex < remainingFiles.length) {
+          await processFile(remainingFiles[currentIndex]);
+        }
+      }
+    })();
+    workers.push(worker);
   }
+
+  await Promise.all(workers);
 
   spinner.succeed(`Processed ${processedCount}/${remaining} files (${errors.length} errors)`);
 
