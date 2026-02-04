@@ -72,19 +72,26 @@ fi
 mkdir -p "$CLUTCH_DIR"
 mkdir -p "$HOME/.local/bin"
 
-# Download clutch
-echo "Downloading clutch..."
-temp_file=$(mktemp)
-if ! download_file "$CLUTCH_URL" "$temp_file"; then
-    echo "Download failed" >&2
-    rm -f "$temp_file"
-    exit 1
-fi
+# Install from local or remote
+if [ -f "$(dirname "$0")/clutch" ]; then
+    # Local installation
+    echo "Installing from local directory..."
+    cp "$(dirname "$0")/clutch" "$INSTALL_PATH"
+    chmod +x "$INSTALL_PATH"
+else
+    # Remote installation
+    echo "Downloading clutch..."
+    temp_file=$(mktemp)
+    if ! download_file "$CLUTCH_URL" "$temp_file"; then
+        echo "Download failed" >&2
+        rm -f "$temp_file"
+        exit 1
+    fi
 
-# Install
-echo "Installing clutch to $INSTALL_PATH..."
-mv "$temp_file" "$INSTALL_PATH"
-chmod +x "$INSTALL_PATH"
+    echo "Installing clutch to $INSTALL_PATH..."
+    mv "$temp_file" "$INSTALL_PATH"
+    chmod +x "$INSTALL_PATH"
+fi
 
 # Verify installation
 if ! command -v clutch >/dev/null 2>&1; then
