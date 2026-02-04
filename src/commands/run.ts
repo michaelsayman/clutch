@@ -117,13 +117,20 @@ export async function runCommand(projectName?: string) {
         ? `Using this project context:\n\n${context}\n\nAnalyze the file at ${filePath}. Use the explore, grep, and read tools to understand how this file relates to other files in the codebase. Provide a thorough, detailed, and elaborate description (MAXIMUM 400 characters) that explains: what it does, its purpose, key functionality, how it connects to other files, its role in the architecture, and any important patterns or relationships. Be comprehensive and use all available context. Return ONLY the description text, nothing else.`
         : `Analyze the file at ${filePath} in the repository at ${repoDir}. Use the explore, grep, and read tools to understand how this file relates to other files in the codebase. Provide a thorough, detailed, and elaborate description (MAXIMUM 400 characters) that explains: what it does, its purpose, key functionality, how it connects to other files, its role in the architecture, and any important patterns or relationships. Be comprehensive and use all available context. Return ONLY the description text, nothing else.`;
 
-      const { stdout } = await execa('claude', [
+      const result = await execa('claude', [
         '--dangerously-skip-permissions',
         '-p',
         prompt
-      ]);
+      ], {
+        reject: false, // Don't throw on non-zero exit
+        timeout: 120000, // 2 minute timeout per file
+      });
 
-      const description = stdout.trim().replace(/\n/g, ' ').substring(0, 400);
+      if (result.exitCode !== 0) {
+        throw new Error(`Claude exited with code ${result.exitCode}: ${result.stderr}`);
+      }
+
+      const description = result.stdout.trim().replace(/\n/g, ' ').substring(0, 400);
 
       // Append to descriptions.jsonl
       const entry = JSON.stringify({ file: filePath, desc: description }) + '\n';
@@ -136,6 +143,11 @@ export async function runCommand(projectName?: string) {
       spinner.text = `Processing files: ${processedCount}/${remaining} completed (${errors.length} errors)`;
     } catch (error) {
       errors.push(filePath);
+      // Log first few errors for debugging
+      if (errors.length <= 3) {
+        spinner.warn(`Error processing ${filePath}: ${error instanceof Error ? error.message : String(error)}`);
+        spinner.start();
+      }
       spinner.text = `Processing files: ${processedCount}/${remaining} completed (${errors.length} errors)`;
     }
   };
