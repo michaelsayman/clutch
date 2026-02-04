@@ -108,15 +108,8 @@ export async function runCommand(projectName?: string) {
   const processFile = async (filePath: string): Promise<void> => {
     console.log(chalk.dim(`  Starting: ${filePath.substring(filePath.lastIndexOf('/') + 1)}`));
     try {
-      // Read PROJECT_CONTEXT.md if it exists
-      let context = '';
-      try {
-        context = await readFile(join(projectDir, 'PROJECT_CONTEXT.md'), 'utf-8');
-      } catch {}
-
-      const prompt = context
-        ? `Using this project context:\n\n${context}\n\nRead and analyze the file at ${filePath}. Provide a detailed description (MAXIMUM 400 characters) covering: what it does, its purpose, key functionality, and role in the system. Be thorough and specific. Return ONLY the description text, nothing else.`
-        : `Read and analyze the file at ${filePath}. Provide a detailed description (MAXIMUM 400 characters) covering: what it does, its purpose, key functionality, and role in the system. Be thorough and specific. Return ONLY the description text, nothing else.`;
+      // Simple prompt without massive context
+      const prompt = `Read and analyze the file at ${filePath}. Provide a detailed description (MAXIMUM 400 characters) covering: what it does, its purpose, key functionality, and role in the system. Be thorough and specific. Return ONLY the description text, nothing else.`;
 
       const result = await execa('claude', [
         '--dangerously-skip-permissions',
