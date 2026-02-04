@@ -1,13 +1,14 @@
-import { readdir, readFile, appendFile } from 'fs/promises';
+import { readdir, readFile, appendFile, writeFile } from 'fs/promises';
 import { join } from 'path';
 import { select } from '@inquirer/prompts';
 import { execa } from 'execa';
 import chalk from 'chalk';
-import { PROJECTS_DIR, ProjectMetadata } from '../utils/config.js';
+import ora from 'ora';
+import { PROJECTS_DIR, REPOS_DIR, ProjectMetadata } from '../utils/config.js';
 
 export async function runCommand(projectName?: string) {
   console.log();
-  console.log(chalk.bold('Processing files'));
+  console.log(chalk.cyan.bold('⚡ Processing files'));
   console.log();
 
   // Select project if not specified
@@ -49,25 +50,31 @@ export async function runCommand(projectName?: string) {
   }
 
   const projectDir = join(PROJECTS_DIR, projectName);
+  const repoDir = join(REPOS_DIR, projectName);
 
   // Get stats
   const metadata: ProjectMetadata = JSON.parse(await readFile(join(projectDir, 'metadata.json'), 'utf-8'));
+  const allFilesContent = await readFile(join(projectDir, 'all_files.txt'), 'utf-8');
+  const allFiles = allFilesContent.split('\n').filter(Boolean);
   const completedContent = await readFile(join(projectDir, 'completed.txt'), 'utf-8').catch(() => '');
-  const completed = completedContent.split('\n').filter(Boolean).length;
-  const remaining = metadata.total_files - completed;
+  const completedSet = new Set(completedContent.split('\n').filter(Boolean));
+  const remainingFiles = allFiles.filter(f => !completedSet.has(f));
+
+  const completed = completedSet.size;
+  const remaining = remainingFiles.length;
   const percentage = metadata.total_files > 0 ? Math.round((completed / metadata.total_files) * 100) : 0;
 
-  console.log(`Progress: ${chalk.bold(percentage + '%')} (${completed}/${metadata.total_files} files, ${remaining} remaining)`);
+  console.log(`Progress: ${chalk.cyan.bold(percentage + '%')} ${chalk.dim(`(${completed}/${metadata.total_files} files, ${remaining} remaining)`)}`);
   console.log();
 
   if (remaining === 0) {
-    console.log('✓ All files processed');
+    console.log(chalk.green('✓ All files processed!'));
     console.log();
     return;
   }
 
   // Select worker count
-  const workerChoice = await select({
+  const workerCount = await select({
     message: 'Select worker count:',
     choices: [
       { name: '10 workers (slower, lower API usage)', value: 10 },
@@ -79,12 +86,68 @@ export async function runCommand(projectName?: string) {
   });
 
   console.log();
-  console.log(`→ Starting ${workerChoice} workers...`);
+  console.log(chalk.cyan(`→ Starting ${workerCount} workers...`));
   console.log();
 
-  // Process files (simplified - would need to implement parallel worker logic)
-  console.log(chalk.yellow('Note: Worker processing not yet implemented in this version'));
+  const spinner = ora({
+    text: `Processing files: 0/${remaining} completed`,
+    color: 'cyan'
+  }).start();
+
+  let processedCount = 0;
+  const errors: string[] = [];
+
+  // Process files with concurrency control
+  const processFile = async (filePath: string): Promise<void> => {
+    try {
+      // Read PROJECT_CONTEXT.md if it exists
+      let context = '';
+      try {
+        context = await readFile(join(projectDir, 'PROJECT_CONTEXT.md'), 'utf-8');
+      } catch {}
+
+      const prompt = context
+        ? `Using this project context:\n\n${context}\n\nAnalyze the file at ${filePath} and provide a concise description (MAXIMUM 400 characters) of what it does, its purpose, and key functionality. Return ONLY the description text, nothing else.`
+        : `Analyze the file at ${filePath} and provide a concise description (MAXIMUM 400 characters) of what it does, its purpose, and key functionality. Return ONLY the description text, nothing else.`;
+
+      const { stdout } = await execa('claude', [
+        '--dangerously-skip-permissions',
+        '-p',
+        prompt
+      ]);
+
+      const description = stdout.trim().replace(/\n/g, ' ').substring(0, 400);
+
+      // Append to descriptions.jsonl
+      const entry = JSON.stringify({ file: filePath, desc: description }) + '\n';
+      await appendFile(join(projectDir, 'descriptions.jsonl'), entry);
+
+      // Mark as completed
+      await appendFile(join(projectDir, 'completed.txt'), filePath + '\n');
+
+      processedCount++;
+      spinner.text = `Processing files: ${processedCount}/${remaining} completed (${errors.length} errors)`;
+    } catch (error) {
+      errors.push(filePath);
+      spinner.text = `Processing files: ${processedCount}/${remaining} completed (${errors.length} errors)`;
+    }
+  };
+
+  // Process files in batches with concurrency control
+  for (let i = 0; i < remainingFiles.length; i += workerCount) {
+    const batch = remainingFiles.slice(i, i + workerCount);
+    await Promise.all(batch.map(processFile));
+  }
+
+  spinner.succeed(`Processed ${processedCount}/${remaining} files (${errors.length} errors)`);
+
+  if (errors.length > 0) {
+    console.log();
+    console.log(chalk.yellow(`⚠ ${errors.length} files failed to process`));
+    console.log(chalk.dim('Run the command again to retry failed files'));
+  }
+
   console.log();
-  console.log('Output:', chalk.bold(join(projectDir, 'descriptions.jsonl')));
+  console.log(chalk.dim('Output:'), chalk.white.bold(join(projectDir, 'descriptions.jsonl')));
   console.log();
 }
