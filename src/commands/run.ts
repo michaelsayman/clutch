@@ -107,8 +107,8 @@ export async function runCommand(projectName?: string) {
       } catch {}
 
       const prompt = context
-        ? `Using this project context:\n\n${context}\n\nAnalyze the file at ${filePath} and provide a detailed description (MAXIMUM 400 characters) of what it does, its purpose, and key functionality. Be thorough but stay within the character limit. Return ONLY the description text, nothing else.`
-        : `Analyze the file at ${filePath} and provide a detailed description (MAXIMUM 400 characters) of what it does, its purpose, and key functionality. Be thorough but stay within the character limit. Return ONLY the description text, nothing else.`;
+        ? `Using this project context:\n\n${context}\n\nAnalyze the file at ${filePath}. Use the explore, grep, and read tools to understand how this file relates to other files in the codebase. Provide a thorough, detailed, and elaborate description (MAXIMUM 400 characters) that explains: what it does, its purpose, key functionality, how it connects to other files, its role in the architecture, and any important patterns or relationships. Be comprehensive and use all available context. Return ONLY the description text, nothing else.`
+        : `Analyze the file at ${filePath} in the repository at ${repoDir}. Use the explore, grep, and read tools to understand how this file relates to other files in the codebase. Provide a thorough, detailed, and elaborate description (MAXIMUM 400 characters) that explains: what it does, its purpose, key functionality, how it connects to other files, its role in the architecture, and any important patterns or relationships. Be comprehensive and use all available context. Return ONLY the description text, nothing else.`;
 
       const { stdout } = await execa('claude', [
         '--dangerously-skip-permissions',
