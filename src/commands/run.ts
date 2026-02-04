@@ -101,7 +101,7 @@ export async function runCommand(projectName?: string) {
       validate: (value) => {
         const num = parseInt(value);
         if (isNaN(num) || num < 1) return 'Please enter a number greater than 0';
-        if (num > 100) return 'Maximum 100 workers allowed';
+        if (num > 500) return 'Maximum 500 workers allowed';
         return true;
       },
     }));
