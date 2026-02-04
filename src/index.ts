@@ -6,9 +6,10 @@ import { select, input, confirm } from '@inquirer/prompts';
 import { initCommand } from './commands/init.js';
 import { runCommand } from './commands/run.js';
 import { statusCommand } from './commands/status.js';
+import { updateCommand } from './commands/update.js';
 import { uninstallCommand } from './commands/uninstall.js';
 
-const VERSION = '1.1.8';
+const VERSION = '1.1.9';
 
 const LOGO = `
  ██████╗██╗     ██╗   ██╗████████╗ ██████╗██╗  ██╗
@@ -43,6 +44,11 @@ program
   .action(statusCommand);
 
 program
+  .command('update')
+  .description('Check for updates and update clutch')
+  .action(updateCommand);
+
+program
   .command('uninstall')
   .description('Remove clutch from your system')
   .action(uninstallCommand);
@@ -62,6 +68,7 @@ async function interactiveMode() {
         { name: '🚀 Initialize a new repository', value: 'init' },
         { name: '⚡ Process files with AI', value: 'run' },
         { name: '📊 View project status', value: 'status' },
+        { name: '🔄 Check for updates', value: 'update' },
         { name: '❓ Show help', value: 'help' },
         { name: '🗑️  Uninstall clutch', value: 'uninstall' },
         { name: '👋 Exit', value: 'exit' },
@@ -100,6 +107,16 @@ async function interactiveMode() {
         break;
       case 'status':
         await statusCommand();
+        console.log();
+        await input({ message: chalk.dim('Press Enter to continue...') });
+        console.clear();
+        console.log(chalk.cyan(LOGO));
+        console.log(chalk.dim('  AI-powered repository documentation with Claude Code'));
+        console.log(chalk.dim('  Version ' + VERSION));
+        console.log();
+        break;
+      case 'update':
+        await updateCommand();
         console.log();
         await input({ message: chalk.dim('Press Enter to continue...') });
         console.clear();
