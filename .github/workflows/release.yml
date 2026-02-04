@@ -40,7 +40,7 @@ jobs:
         run: npm run build:all
 
       - name: Build binary
-        run: npx pkg dist/bundle.js --targets ${{ matrix.target }} --compress Brotli --output clutch-${{ matrix.platform }}
+        run: npx pkg dist/ncc/index.js --targets ${{ matrix.target }} --compress Brotli --output clutch-${{ matrix.platform }}
 
       - name: Calculate checksum
         id: checksum

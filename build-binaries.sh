@@ -12,7 +12,7 @@ npm run build:all
 
 # Build binaries
 echo "→ Building binaries for all platforms..."
-npx pkg dist/bundle.js \
+npx pkg dist/ncc/index.js \
   --targets node18-macos-x64,node18-macos-arm64,node18-linux-x64,node18-linux-arm64 \
   --compress Brotli \
   --output clutch
