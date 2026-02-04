@@ -81,7 +81,7 @@ export async function runCommand(projectName?: string) {
   }
 
   // Select worker count
-  const workerCount = await select({
+  let workerCount = await select({
     message: 'Select worker count:',
     choices: [
       { name: '1 worker (debug mode)', value: 1 },
@@ -90,8 +90,22 @@ export async function runCommand(projectName?: string) {
       { name: '30 workers (faster)', value: 30 },
       { name: '40 workers (high speed)', value: 40 },
       { name: '50 workers (maximum speed)', value: 50 },
+      { name: 'Custom number of workers', value: -1 },
     ],
   });
+
+  if (workerCount === -1) {
+    const { input } = await import('@inquirer/prompts');
+    workerCount = parseInt(await input({
+      message: 'Enter number of workers:',
+      validate: (value) => {
+        const num = parseInt(value);
+        if (isNaN(num) || num < 1) return 'Please enter a number greater than 0';
+        if (num > 100) return 'Maximum 100 workers allowed';
+        return true;
+      },
+    }));
+  }
 
   console.log();
   console.log(chalk.cyan(`→ Starting ${workerCount} workers...`));

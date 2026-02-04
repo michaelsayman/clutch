@@ -2,7 +2,7 @@ import { execa } from 'execa';
 import chalk from 'chalk';
 import ora from 'ora';
 
-const CURRENT_VERSION = '1.1.9';
+const CURRENT_VERSION = '1.2.0';
 
 export async function updateCommand() {
   console.log();

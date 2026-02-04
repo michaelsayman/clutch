@@ -9,7 +9,7 @@ import { statusCommand } from './commands/status.js';
 import { updateCommand } from './commands/update.js';
 import { uninstallCommand } from './commands/uninstall.js';
 
-const VERSION = '1.1.9';
+const VERSION = '1.2.0';
 
 const LOGO = `
  ██████╗██╗     ██╗   ██╗████████╗ ██████╗██╗  ██╗
