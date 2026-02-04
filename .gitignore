@@ -1,0 +1,20 @@
+# Generated files
+all_files.txt
+completed.txt
+descriptions.jsonl
+file_stats.txt
+live_log.txt
+active_workers.txt
+start_time.txt
+init_log.txt
+PROJECT_CONTEXT.md
+
+# Cloned repositories
+repos/
+
+# Backup files
+*.tmp
+*.bak
+
+# macOS
+.DS_Store

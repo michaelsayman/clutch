@@ -17,25 +17,25 @@ if grep -Fxq "$FILE" "$DESC_DIR/completed.txt" 2>/dev/null; then
     exit 0
 fi
 
-# Get short path for display
-SHORT="${FILE#/Users/saymanmini/Documents/GitHub/openclaw/}"
+# Get short path for display (relative to repos directory)
+SHORT="${FILE#$DESC_DIR/repos/}"
 
 # Log start
 echo "$(date +%H:%M:%S) START $SHORT" >> "$LOG_FILE"
 echo "$SHORT" >> "$ACTIVE_FILE"
 
 # Run Claude Code
-claude --dangerously-skip-permissions -p "You are analyzing ONE file from OpenClaw - a multi-channel AI gateway that connects AI assistants to messaging platforms (WhatsApp, Telegram, Discord, Slack, Signal, iMessage, Teams, Matrix, LINE, Nostr, Zalo, Feishu).
+claude --dangerously-skip-permissions -p "You are analyzing ONE file from a code repository as part of an automated documentation system.
 
 IMPORTANT: Process ONLY this ONE file, then EXIT immediately.
 
 ## Your Task
-1. First, read $DESC_DIR/OPENCLAW_CONTEXT.md for project architecture context
+1. First, read $DESC_DIR/PROJECT_CONTEXT.md for project architecture context
 2. Read this file: $FILE
 3. You MAY use the Explore tool or read related files to understand how this file fits into the project architecture. This helps you write a more informed description.
 4. Write a 2-5 sentence description (MAXIMUM 400 characters) explaining:
    - What the file does
-   - Its role/relationship in OpenClaw's architecture
+   - Its role/relationship in the project's architecture
    - Key functionality and how it connects to other parts of the system
 5. Append ONE JSON line to $DESC_DIR/descriptions.jsonl:
    {\"file\":\"$FILE\",\"desc\":\"Your description here\"}
