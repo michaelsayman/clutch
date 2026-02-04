@@ -1,21 +1,31 @@
 #!/bin/bash
-# Build binaries for all platforms
+# Build binaries for all platforms using Bun
 
 set -e
 
-echo "Building Clutch binaries..."
+echo "Building Clutch binaries with Bun..."
 echo ""
 
-# Build and bundle
-echo "→ Compiling TypeScript and bundling..."
-npm run build:all
+# Check for Bun
+if ! command -v bun >/dev/null 2>&1; then
+    echo "Error: Bun is required but not installed"
+    echo "Install from: https://bun.sh"
+    exit 1
+fi
 
-# Build binaries
+# Install dependencies
+echo "→ Installing dependencies..."
+bun install
+
+# Build binaries for each platform
 echo "→ Building binaries for all platforms..."
-npx pkg dist/ncc/index.js \
-  --targets node18-macos-x64,node18-macos-arm64,node18-linux-x64,node18-linux-arm64 \
-  --compress Brotli \
-  --output clutch
+echo ""
+
+for target in bun-darwin-x64 bun-darwin-arm64 bun-linux-x64 bun-linux-arm64; do
+  platform=$(echo $target | sed 's/bun-//')
+  echo "Building $platform..."
+  bun build --compile --minify --sourcemap --target=$target src/index.ts --outfile clutch-$platform
+done
 
 echo ""
 echo "✓ Binaries built:"
@@ -25,6 +35,9 @@ echo ""
 # Generate checksums
 echo "→ Generating checksums..."
 for binary in clutch-*; do
+  # Skip .sha256 files
+  [[ "$binary" == *.sha256 ]] && continue
+
   if [[ "$OSTYPE" == "darwin"* ]]; then
     shasum -a 256 "$binary" | cut -d' ' -f1 > "$binary.sha256"
   else

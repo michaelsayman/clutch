@@ -119,22 +119,23 @@ This removes:
 - **Git** (required) - For cloning repositories
 - **curl or wget** (required) - For installation
 
-Node.js is bundled in the binary - no need to install it separately!
+Bun runtime is bundled in the binary - no dependencies needed!
 
 ## Architecture
 
-Clutch is built with TypeScript and bundled into standalone binaries using `pkg`:
+Clutch is built with TypeScript and compiled to standalone binaries using Bun:
 
 - **Pre-built binaries** for macOS (x64/arm64) and Linux (x64/arm64)
-- **Node.js bundled** inside the binary - no runtime dependencies
+- **Bun runtime bundled** inside the binary - no dependencies
 - **Zero config** - just download and run
+- **Native ESM support** - modern JavaScript out of the box
 
 For developers:
 - `src/` - TypeScript source code
-- `build-binaries.sh` - Build all platform binaries locally
+- `build-binaries.sh` - Build all platform binaries locally with Bun
 - `.github/workflows/release.yml` - Automated binary builds on release
 
-Clean and simple, just like Claude Code.
+Built with modern tooling for modern code.
 
 ## License
 
