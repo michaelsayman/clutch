@@ -106,6 +106,7 @@ export async function runCommand(projectName?: string) {
 
   // Process files with concurrency control
   const processFile = async (filePath: string): Promise<void> => {
+    console.log(chalk.dim(`  Starting: ${filePath.substring(filePath.lastIndexOf('/') + 1)}`));
     try {
       // Read PROJECT_CONTEXT.md if it exists
       let context = '';
@@ -153,9 +154,14 @@ export async function runCommand(projectName?: string) {
   };
 
   // Process files in batches with concurrency control
+  console.log(chalk.dim(`\nProcessing ${remainingFiles.length} files in batches of ${workerCount}...`));
+  console.log(chalk.dim(`First file: ${remainingFiles[0]}`));
+
   for (let i = 0; i < remainingFiles.length; i += workerCount) {
     const batch = remainingFiles.slice(i, i + workerCount);
+    console.log(chalk.dim(`\nBatch ${Math.floor(i / workerCount) + 1}: Processing ${batch.length} files...`));
     await Promise.all(batch.map(processFile));
+    console.log(chalk.dim(`Batch ${Math.floor(i / workerCount) + 1} complete`));
   }
 
   spinner.succeed(`Processed ${processedCount}/${remaining} files (${errors.length} errors)`);
