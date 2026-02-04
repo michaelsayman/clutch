@@ -156,6 +156,30 @@ export async function runCommand(projectName?: string) {
 
   let processedCount = 0;
   const errors: string[] = [];
+  const activeProcesses = new Set<any>();
+
+  // Cleanup handler for child processes
+  const cleanup = () => {
+    if (activeProcesses.size > 0) {
+      console.log(chalk.yellow(`\nCleaning up ${activeProcesses.size} active processes...`));
+      for (const proc of activeProcesses) {
+        try {
+          proc.kill();
+        } catch {}
+      }
+      activeProcesses.clear();
+    }
+  };
+
+  // Register cleanup handlers
+  process.on('SIGINT', () => {
+    cleanup();
+    process.exit(130);
+  });
+  process.on('SIGTERM', () => {
+    cleanup();
+    process.exit(143);
+  });
 
   // Process files with concurrency control
   const processFile = async (filePath: string): Promise<void> => {
@@ -164,7 +188,7 @@ export async function runCommand(projectName?: string) {
       // Focused prompt with targeted exploration
       const prompt = `Read the file at ${filePath} in repository ${repoDir}. Quickly check its imports/exports and what files reference it. Provide a detailed description (MAXIMUM 400 characters) covering: what it does, its purpose, key functionality, how it connects to other parts of the codebase, and its role. Be thorough but efficient. Return ONLY the description text.`;
 
-      const result = await execa('claude', [
+      const childProcess = execa('claude', [
         '--dangerously-skip-permissions',
         '-p',
         prompt
@@ -173,6 +197,10 @@ export async function runCommand(projectName?: string) {
         timeout: 300000, // 5 minute timeout per file
         stdin: 'ignore', // FIX: Claude Code hangs with piped stdin
       });
+
+      activeProcesses.add(childProcess);
+      const result = await childProcess;
+      activeProcesses.delete(childProcess);
 
       if (result.exitCode !== 0) {
         throw new Error(`Claude exited with code ${result.exitCode}: ${result.stderr}`);
@@ -222,6 +250,10 @@ export async function runCommand(projectName?: string) {
   }
 
   await Promise.all(workers);
+
+  // Remove cleanup handlers
+  process.removeAllListeners('SIGINT');
+  process.removeAllListeners('SIGTERM');
 
   spinner.succeed(`Processed ${processedCount}/${remaining} files (${errors.length} errors)`);
 
