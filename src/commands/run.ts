@@ -80,6 +80,44 @@ export async function runCommand(projectName?: string) {
     return;
   }
 
+  // Ask to resume or restart if there's progress
+  if (completed > 0) {
+    const { select } = await import('@inquirer/prompts');
+    const action = await select({
+      message: 'What would you like to do?',
+      choices: [
+        { name: `Resume from ${remaining} remaining files`, value: 'resume' },
+        { name: 'Restart from beginning (clears progress)', value: 'restart' },
+      ],
+    });
+
+    if (action === 'restart') {
+      const { confirm } = await import('@inquirer/prompts');
+      const confirmed = await confirm({
+        message: `This will delete progress for ${completed} completed files. Continue?`,
+        default: false,
+      });
+
+      if (confirmed) {
+        const { writeFile } = await import('fs/promises');
+        await writeFile(join(projectDir, 'completed.txt'), '');
+        await writeFile(join(projectDir, 'descriptions.jsonl'), '');
+        console.log();
+        console.log(chalk.yellow('✓ Progress cleared. Starting from beginning...'));
+        console.log();
+        // Reset for processing
+        completedSet.clear();
+        remainingFiles.length = 0;
+        remainingFiles.push(...allFiles);
+      } else {
+        console.log();
+        console.log(chalk.dim('Cancelled.'));
+        console.log();
+        return;
+      }
+    }
+  }
+
   // Select worker count
   let workerCount = await select({
     message: 'Select worker count:',
