@@ -6,13 +6,13 @@ set -e
 echo "Building Clutch binaries..."
 echo ""
 
-# Build TypeScript
-echo "→ Compiling TypeScript..."
-npm run build
+# Build and bundle
+echo "→ Compiling TypeScript and bundling..."
+npm run build:all
 
 # Build binaries
 echo "→ Building binaries for all platforms..."
-npx pkg . \
+npx pkg dist/bundle.js \
   --targets node18-macos-x64,node18-macos-arm64,node18-linux-x64,node18-linux-arm64 \
   --compress Brotli \
   --output clutch

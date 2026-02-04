@@ -36,11 +36,11 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Build TypeScript
-        run: npm run build
+      - name: Build and bundle
+        run: npm run build:all
 
       - name: Build binary
-        run: npx pkg . --targets ${{ matrix.target }} --compress Brotli --output clutch-${{ matrix.platform }}
+        run: npx pkg dist/bundle.js --targets ${{ matrix.target }} --compress Brotli --output clutch-${{ matrix.platform }}
 
       - name: Calculate checksum
         id: checksum
