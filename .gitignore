@@ -1,4 +1,10 @@
-# Generated files
+# Project data (contains all project-specific files)
+projects/
+
+# Cloned repositories
+repos/
+
+# Legacy generated files (if any still exist in root)
 all_files.txt
 completed.txt
 descriptions.jsonl
@@ -8,9 +14,7 @@ active_workers.txt
 start_time.txt
 init_log.txt
 PROJECT_CONTEXT.md
-
-# Cloned repositories
-repos/
+OPENCLAW_CONTEXT.md
 
 # Backup files
 *.tmp
