@@ -84,6 +84,7 @@ export async function runCommand(projectName?: string) {
   const workerCount = await select({
     message: 'Select worker count:',
     choices: [
+      { name: '1 worker (debug mode)', value: 1 },
       { name: '10 workers (slower, lower API usage)', value: 10 },
       { name: '20 workers (balanced)', value: 20 },
       { name: '30 workers (faster)', value: 30 },
@@ -118,6 +119,7 @@ export async function runCommand(projectName?: string) {
       ], {
         reject: false, // Don't throw on non-zero exit
         timeout: 300000, // 5 minute timeout per file
+        stdin: 'ignore', // FIX: Claude Code hangs with piped stdin
       });
 
       if (result.exitCode !== 0) {
