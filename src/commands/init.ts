@@ -72,20 +72,14 @@ export async function initCommand(repoUrl: string) {
     console.log(chalk.cyan('→ Generating project context with Claude...'));
     console.log();
     try {
-      const claudeProcess = execa('claude', [
+      // Use stdio: 'inherit' to pipe Claude's output directly to the terminal
+      await execa('claude', [
         '--dangerously-skip-permissions',
         '-p',
         `Analyze repository at ${repoDir} and create PROJECT_CONTEXT.md at ${join(projectDir, 'PROJECT_CONTEXT.md')} with: project purpose, architecture, technologies, repo structure, main features. Then append 'SUCCESS' to ${join(projectDir, 'init_log.txt')} and EXIT.`
-      ]);
-
-      // Stream Claude's output
-      if (claudeProcess.stdout) {
-        for await (const chunk of claudeProcess.stdout) {
-          process.stdout.write(chalk.dim(chunk.toString()));
-        }
-      }
-
-      await claudeProcess;
+      ], {
+        stdio: 'inherit', // This pipes stdout/stderr directly to the terminal
+      });
       console.log();
       console.log(chalk.green('✓') + ' Context generated');
     } catch (error) {
