@@ -1,10 +1,27 @@
-# Project data (contains all project-specific files)
-projects/
+# Node.js
+node_modules/
+dist/
+*.log
+npm-debug.log*
 
-# Cloned repositories
+# Project data
+projects/
 repos/
 
-# Legacy generated files (if any still exist in root)
+# TypeScript
+*.tsbuildinfo
+
+# Legacy bash files
+clutch.bash.bak
+
+# Backup files
+*.tmp
+*.bak
+
+# macOS
+.DS_Store
+
+# Old generated files
 all_files.txt
 completed.txt
 descriptions.jsonl
@@ -15,10 +32,3 @@ start_time.txt
 init_log.txt
 PROJECT_CONTEXT.md
 OPENCLAW_CONTEXT.md
-
-# Backup files
-*.tmp
-*.bak
-
-# macOS
-.DS_Store

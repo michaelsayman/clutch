@@ -3,43 +3,35 @@
 
 set -e
 
-# Configuration
-CLUTCH_URL="https://raw.githubusercontent.com/user/clutch/main/clutch"
+CLUTCH_URL="https://raw.githubusercontent.com/michaelsayman/clutch/main"
 CLUTCH_DIR="$HOME/.clutch"
 INSTALL_PATH="$HOME/.local/bin/clutch"
+LIB_PATH="$HOME/.local/lib/clutch"
 
-# Check for required dependencies
-DOWNLOADER=""
-if command -v curl >/dev/null 2>&1; then
-    DOWNLOADER="curl"
-elif command -v wget >/dev/null 2>&1; then
-    DOWNLOADER="wget"
-else
-    echo "Either curl or wget is required but neither is installed" >&2
+# Colors
+CYAN='\033[0;36m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+RED='\033[0;31m'
+BOLD='\033[1m'
+NC='\033[0m'
+
+echo -e "${CYAN}${BOLD}Installing Clutch...${NC}\n"
+
+# Check for Node.js
+if ! command -v node >/dev/null 2>&1; then
+    echo -e "${RED}Error: Node.js is required but not installed${NC}" >&2
+    echo "Install from: https://nodejs.org/" >&2
     exit 1
 fi
 
-# Download function that works with both curl and wget
-download_file() {
-    local url="$1"
-    local output="$2"
-
-    if [ "$DOWNLOADER" = "curl" ]; then
-        if [ -n "$output" ]; then
-            curl -fsSL -o "$output" "$url"
-        else
-            curl -fsSL "$url"
-        fi
-    elif [ "$DOWNLOADER" = "wget" ]; then
-        if [ -n "$output" ]; then
-            wget -q -O "$output" "$url"
-        else
-            wget -q -O - "$url"
-        fi
-    else
-        return 1
-    fi
-}
+NODE_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
+if [ "$NODE_VERSION" -lt 18 ]; then
+    echo -e "${RED}Error: Node.js 18 or higher is required${NC}" >&2
+    echo "Current version: $(node -v)" >&2
+    echo "Install from: https://nodejs.org/" >&2
+    exit 1
+fi
 
 # Check for Git
 if ! command -v git >/dev/null 2>&1; then
@@ -50,53 +42,76 @@ fi
 
 # Check for Claude Code
 if ! command -v claude >/dev/null 2>&1; then
-    echo "Warning: Claude Code CLI not found" >&2
+    echo -e "${YELLOW}Warning: Claude Code CLI not found${NC}" >&2
     echo "Clutch requires Claude Code to function." >&2
-    echo "Install from: https://claude.ai/download" >&2
-    echo "" >&2
+    echo -e "Install from: https://claude.ai/download\n" >&2
     read -p "Continue anyway? [y/N]: " cont
     [[ ! "$cont" =~ ^[Yy]$ ]] && exit 1
-fi
-
-# Check for optional dependencies
-if ! command -v jq >/dev/null 2>&1; then
-    echo "Note: jq not found (recommended for metadata parsing)" >&2
-    case "$(uname -s)" in
-        Darwin) echo "Install with: brew install jq" >&2 ;;
-        Linux) echo "Install with: sudo apt install jq (or equivalent)" >&2 ;;
-    esac
-    echo "" >&2
 fi
 
 # Create directories
 mkdir -p "$CLUTCH_DIR"
 mkdir -p "$HOME/.local/bin"
+mkdir -p "$LIB_PATH"
 
 # Install from local or remote
-if [ -f "$(dirname "$0")/clutch" ]; then
+if [ -f "$(dirname "$0")/package.json" ]; then
     # Local installation
     echo "Installing from local directory..."
-    cp "$(dirname "$0")/clutch" "$INSTALL_PATH"
-    chmod +x "$INSTALL_PATH"
-else
-    # Remote installation
-    echo "Downloading clutch..."
-    temp_file=$(mktemp)
-    if ! download_file "$CLUTCH_URL" "$temp_file"; then
-        echo "Download failed" >&2
-        rm -f "$temp_file"
-        exit 1
+
+    # Check if already built
+    if [ ! -d "$(dirname "$0")/dist" ]; then
+        echo "Building Clutch..."
+        cd "$(dirname "$0")"
+        npm install --production
+        npm run build
+        cd - > /dev/null
     fi
 
-    echo "Installing clutch to $INSTALL_PATH..."
-    mv "$temp_file" "$INSTALL_PATH"
-    chmod +x "$INSTALL_PATH"
+    # Copy built files
+    cp -r "$(dirname "$0")/dist" "$LIB_PATH/"
+    cp "$(dirname "$0")/package.json" "$LIB_PATH/"
+
+    # Copy node_modules (only production dependencies)
+    if [ -d "$(dirname "$0")/node_modules" ]; then
+        cp -r "$(dirname "$0")/node_modules" "$LIB_PATH/"
+    else
+        cd "$LIB_PATH"
+        npm install --production --silent
+        cd - > /dev/null
+    fi
+else
+    # Remote installation
+    echo "Downloading Clutch..."
+
+    # Download and extract
+    temp_dir=$(mktemp -d)
+    git clone --depth 1 https://github.com/michaelsayman/clutch.git "$temp_dir"
+
+    cd "$temp_dir"
+    npm install --production --silent
+    npm run build
+
+    cp -r dist "$LIB_PATH/"
+    cp package.json "$LIB_PATH/"
+    cp -r node_modules "$LIB_PATH/"
+
+    cd - > /dev/null
+    rm -rf "$temp_dir"
 fi
+
+# Create wrapper script
+cat > "$INSTALL_PATH" << 'EOF'
+#!/bin/bash
+NODE_PATH="$HOME/.local/lib/clutch/node_modules" node "$HOME/.local/lib/clutch/dist/index.js" "$@"
+EOF
+
+chmod +x "$INSTALL_PATH"
 
 # Verify installation
 if ! command -v clutch >/dev/null 2>&1; then
     echo "" >&2
-    echo "Installation complete, but clutch is not in your PATH." >&2
+    echo -e "${YELLOW}Installation complete, but clutch is not in your PATH.${NC}" >&2
     echo "Add this line to your shell profile (~/.bashrc, ~/.zshrc, etc.):" >&2
     echo "" >&2
     echo "  export PATH=\"\$HOME/.local/bin:\$PATH\"" >&2
@@ -106,10 +121,9 @@ if ! command -v clutch >/dev/null 2>&1; then
 fi
 
 echo ""
-echo "✅ Installation complete!"
-echo ""
+echo -e "${GREEN}${BOLD}✅ Clutch installed successfully!${NC}\n"
 echo "Get started:"
 echo "  clutch init https://github.com/user/repo"
 echo "  clutch status"
-echo "  clutch run"
+echo "  clutch"
 echo ""
