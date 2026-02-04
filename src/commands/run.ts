@@ -13,7 +13,10 @@ export async function runCommand(projectName?: string) {
 
   // Select project if not specified
   if (!projectName) {
-    const projects = await readdir(PROJECTS_DIR);
+    const allItems = await readdir(PROJECTS_DIR, { withFileTypes: true });
+    const projects = allItems
+      .filter(item => item.isDirectory() && !item.name.startsWith('.'))
+      .map(item => item.name);
 
     if (projects.length === 0) {
       console.error('No projects found');
@@ -29,18 +32,22 @@ export async function runCommand(projectName?: string) {
     } else {
       const choices = await Promise.all(
         projects.map(async (proj) => {
-          const metadata: ProjectMetadata = JSON.parse(
-            await readFile(join(PROJECTS_DIR, proj, 'metadata.json'), 'utf-8')
-          );
-          const completed = (await readFile(join(PROJECTS_DIR, proj, 'completed.txt'), 'utf-8').catch(() => ''))
-            .split('\n').filter(Boolean).length;
+          try {
+            const metadata: ProjectMetadata = JSON.parse(
+              await readFile(join(PROJECTS_DIR, proj, 'metadata.json'), 'utf-8')
+            );
+            const completed = (await readFile(join(PROJECTS_DIR, proj, 'completed.txt'), 'utf-8').catch(() => ''))
+              .split('\n').filter(Boolean).length;
 
-          return {
-            name: `${proj} (${completed}/${metadata.total_files} files)`,
-            value: proj,
-          };
+            return {
+              name: `${proj} (${completed}/${metadata.total_files} files)`,
+              value: proj,
+            };
+          } catch {
+            return null;
+          }
         })
-      );
+      ).then(choices => choices.filter(Boolean) as { name: string; value: string }[]);
 
       projectName = await select({
         message: 'Select project:',

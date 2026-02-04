@@ -9,7 +9,10 @@ export async function statusCommand() {
   console.log();
 
   try {
-    const projects = await readdir(PROJECTS_DIR);
+    const allItems = await readdir(PROJECTS_DIR, { withFileTypes: true });
+    const projects = allItems
+      .filter(item => item.isDirectory() && !item.name.startsWith('.'))
+      .map(item => item.name);
 
     if (projects.length === 0) {
       console.log(chalk.dim('No projects initialized yet'));
