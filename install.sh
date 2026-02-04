@@ -95,7 +95,7 @@ manifest_json=$(download_file "$manifest_url" 2>/dev/null || echo "")
 
 if [ -n "$manifest_json" ]; then
     # Extract checksum for the platform
-    expected_checksum=$(echo "$manifest_json" | tr -d '\n' | grep -o "\"$platform\"[[:space:]]*:[[:space:]]*{[^}]*\"checksum\"[[:space:]]*:[[:space:]]*\"[a-f0-9]*\"" | grep -o "[a-f0-9]\{64\}")
+    expected_checksum=$(echo "$manifest_json" | grep -A2 "\"$platform\"" | grep '"checksum"' | cut -d'"' -f4)
 
     if [ -n "$expected_checksum" ]; then
         if [ "$os" = "darwin" ]; then
