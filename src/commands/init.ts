@@ -7,15 +7,15 @@ import { CLUTCH_DIR, REPOS_DIR, PROJECTS_DIR, ProjectMetadata } from '../utils/c
 
 export async function initCommand(repoUrl: string) {
   console.log();
-  console.log(chalk.bold('Initializing repository'));
+  console.log(chalk.cyan.bold('🚀 Initializing repository'));
   console.log();
 
   const repoName = basename(repoUrl, '.git');
   const repoDir = join(REPOS_DIR, repoName);
   const projectDir = join(PROJECTS_DIR, repoName);
 
-  console.log('Repository:', repoName);
-  console.log('URL:', repoUrl);
+  console.log(chalk.dim('Repository:'), chalk.white(repoName));
+  console.log(chalk.dim('URL:'), chalk.white(repoUrl));
   console.log();
 
   // Create directories
@@ -98,12 +98,12 @@ export async function initCommand(repoUrl: string) {
     await writeFile(join(projectDir, 'metadata.json'), JSON.stringify(metadata, null, 2));
 
     console.log();
-    console.log(chalk.green('✓') + ' Initialization complete');
+    console.log(chalk.green.bold('✓ Initialization complete!'));
     console.log();
-    console.log('  Files found:', chalk.bold(files.length.toString()));
-    console.log('  Lines of code:', chalk.bold(totalLoc.toLocaleString()));
+    console.log(chalk.dim('  Files found:'), chalk.cyan.bold(files.length.toString()));
+    console.log(chalk.dim('  Lines of code:'), chalk.cyan.bold(totalLoc.toLocaleString()));
     console.log();
-    console.log('Next:', chalk.bold(`clutch run ${repoName}`));
+    console.log(chalk.dim('Next step:'), chalk.white.bold(`clutch run ${repoName}`));
     console.log();
   } catch (error) {
     locSpinner.fail('Failed to count lines');

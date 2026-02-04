@@ -10,6 +10,15 @@ import { uninstallCommand } from './commands/uninstall.js';
 
 const VERSION = '1.0.0';
 
+const LOGO = `
+ ██████╗██╗     ██╗   ██╗████████╗ ██████╗██╗  ██╗
+██╔════╝██║     ██║   ██║╚══██╔══╝██╔════╝██║  ██║
+██║     ██║     ██║   ██║   ██║   ██║     ███████║
+██║     ██║     ██║   ██║   ██║   ██║     ██╔══██║
+╚██████╗███████╗╚██████╔╝   ██║   ╚██████╗██║  ██║
+ ╚═════╝╚══════╝ ╚═════╝    ╚═╝    ╚═════╝╚═╝  ╚═╝
+`;
+
 const program = new Command();
 
 program
@@ -40,20 +49,22 @@ program
 
 // Interactive mode when no arguments
 async function interactiveMode() {
-  console.log();
-  console.log(chalk.bold('Clutch') + ' - AI-powered repository documentation');
+  console.clear();
+  console.log(chalk.cyan(LOGO));
+  console.log(chalk.dim('  AI-powered repository documentation with Claude Code'));
+  console.log(chalk.dim('  Version ' + VERSION));
   console.log();
 
   while (true) {
     const action = await select({
-      message: 'What would you like to do?',
+      message: chalk.bold('What would you like to do?'),
       choices: [
-        { name: 'Initialize a new repository', value: 'init' },
-        { name: 'Process files', value: 'run' },
-        { name: 'View project status', value: 'status' },
-        { name: 'Uninstall clutch', value: 'uninstall' },
-        { name: 'Show help', value: 'help' },
-        { name: 'Exit', value: 'exit' },
+        { name: '🚀 Initialize a new repository', value: 'init' },
+        { name: '⚡ Process files with AI', value: 'run' },
+        { name: '📊 View project status', value: 'status' },
+        { name: '❓ Show help', value: 'help' },
+        { name: '🗑️  Uninstall clutch', value: 'uninstall' },
+        { name: '👋 Exit', value: 'exit' },
       ],
     });
 
@@ -68,16 +79,34 @@ async function interactiveMode() {
           },
         });
         await initCommand(repoUrl);
-        await input({ message: 'Press Enter to continue...' });
+        console.log();
+        await input({ message: chalk.dim('Press Enter to continue...') });
+        console.clear();
+        console.log(chalk.cyan(LOGO));
+        console.log(chalk.dim('  AI-powered repository documentation with Claude Code'));
+        console.log(chalk.dim('  Version ' + VERSION));
+        console.log();
         break;
       }
       case 'run':
         await runCommand();
-        await input({ message: 'Press Enter to continue...' });
+        console.log();
+        await input({ message: chalk.dim('Press Enter to continue...') });
+        console.clear();
+        console.log(chalk.cyan(LOGO));
+        console.log(chalk.dim('  AI-powered repository documentation with Claude Code'));
+        console.log(chalk.dim('  Version ' + VERSION));
+        console.log();
         break;
       case 'status':
         await statusCommand();
-        await input({ message: 'Press Enter to continue...' });
+        console.log();
+        await input({ message: chalk.dim('Press Enter to continue...') });
+        console.clear();
+        console.log(chalk.cyan(LOGO));
+        console.log(chalk.dim('  AI-powered repository documentation with Claude Code'));
+        console.log(chalk.dim('  Version ' + VERSION));
+        console.log();
         break;
       case 'uninstall': {
         const confirmed = await confirm({
@@ -94,8 +123,9 @@ async function interactiveMode() {
         program.help();
         break;
       case 'exit':
+        console.clear();
         console.log();
-        console.log('Goodbye!');
+        console.log(chalk.cyan('  Thanks for using Clutch! 👋'));
         console.log();
         process.exit(0);
     }

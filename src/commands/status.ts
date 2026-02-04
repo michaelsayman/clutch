@@ -5,17 +5,17 @@ import { PROJECTS_DIR, ProjectMetadata, ProjectStatus } from '../utils/config.js
 
 export async function statusCommand() {
   console.log();
-  console.log(chalk.bold('Projects'));
+  console.log(chalk.cyan.bold('📊 Projects'));
   console.log();
 
   try {
     const projects = await readdir(PROJECTS_DIR);
 
     if (projects.length === 0) {
-      console.log('No projects initialized');
+      console.log(chalk.dim('No projects initialized yet'));
       console.log();
-      console.log('Initialize a project:');
-      console.log('  ' + chalk.bold('clutch init <repo-url>'));
+      console.log(chalk.dim('Get started:'));
+      console.log('  ' + chalk.white.bold('clutch init <repo-url>'));
       console.log();
       return;
     }
@@ -43,19 +43,26 @@ export async function statusCommand() {
     }
 
     for (const status of statuses) {
-      const icon = status.completed === status.total ? '✓' :
-                   status.completed === 0 ? '○' : '⋯';
+      const icon = status.completed === status.total ? chalk.green('✓') :
+                   status.completed === 0 ? chalk.dim('○') : chalk.yellow('⋯');
+
+      const percentColor = status.percentage === 100 ? chalk.green :
+                          status.percentage > 0 ? chalk.cyan : chalk.dim;
+
+      const nameDisplay = status.completed === status.total ?
+        chalk.white(status.name) :
+        chalk.white.bold(status.name);
 
       console.log(
-        ` ${icon} ${status.name.padEnd(30)} ${String(status.percentage).padStart(3)}% complete (${status.completed}/${status.total} files)`
+        ` ${icon} ${nameDisplay.padEnd(40)} ${percentColor(String(status.percentage).padStart(3) + '%')} ${chalk.dim(`(${status.completed}/${status.total} files)`)}`
       );
     }
     console.log();
   } catch (error) {
-    console.log('No projects initialized');
+    console.log(chalk.dim('No projects initialized yet'));
     console.log();
-    console.log('Initialize a project:');
-    console.log('  ' + chalk.bold('clutch init <repo-url>'));
+    console.log(chalk.dim('Get started:'));
+    console.log('  ' + chalk.white.bold('clutch init <repo-url>'));
     console.log();
   }
 }
