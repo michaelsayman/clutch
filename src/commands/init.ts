@@ -69,22 +69,30 @@ export async function initCommand(repoUrl: string) {
     locSpinner.succeed(`Total lines: ${totalLoc.toLocaleString()}`);
 
     // Generate context
-    console.log(chalk.cyan('→ Generating project context with Claude...'));
-    console.log();
+    const contextSpinner = ora({
+      text: 'Generating project context with Claude (this may take several minutes for large repos)...',
+      color: 'cyan'
+    }).start();
+
+    const startTime = Date.now();
+    const progressInterval = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      contextSpinner.text = `Generating project context with Claude (${elapsed}s elapsed, still working...)`;
+    }, 10000); // Update every 10 seconds
+
     try {
-      // Use stdio: 'inherit' to pipe Claude's output directly to the terminal
       await execa('claude', [
         '--dangerously-skip-permissions',
         '-p',
         `Analyze repository at ${repoDir} and create PROJECT_CONTEXT.md at ${join(projectDir, 'PROJECT_CONTEXT.md')} with: project purpose, architecture, technologies, repo structure, main features. Then append 'SUCCESS' to ${join(projectDir, 'init_log.txt')} and EXIT.`
       ], {
-        stdio: 'inherit', // This pipes stdout/stderr directly to the terminal
+        stdio: 'inherit',
       });
-      console.log();
-      console.log(chalk.green('✓') + ' Context generated');
+      clearInterval(progressInterval);
+      contextSpinner.succeed('Context generated');
     } catch (error) {
-      console.log();
-      console.log(chalk.yellow('⚠') + ' Context generation skipped (Claude Code not available)');
+      clearInterval(progressInterval);
+      contextSpinner.warn('Context generation skipped (Claude Code not available)');
     }
 
     // Initialize files
