@@ -2,10 +2,7 @@
   "name": "clutch-cli",
   "version": "1.0.0",
   "description": "AI-powered file description generator for GitHub repositories",
-  "main": "dist/index.js",
-  "bin": {
-    "clutch": "./dist/index.js"
-  },
+  "main": "dist/bundle.js",
   "type": "module",
   "scripts": {
     "build": "tsc",
@@ -43,13 +40,13 @@
     "node": ">=18.0.0"
   },
   "pkg": {
+    "scripts": "dist/bundle.js",
     "targets": [
       "node18-macos-x64",
       "node18-macos-arm64",
       "node18-linux-x64",
       "node18-linux-arm64"
     ],
-    "outputPath": "dist/bin",
-    "assets": []
+    "outputPath": "dist/bin"
   }
 }
