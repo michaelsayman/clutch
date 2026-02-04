@@ -7,15 +7,10 @@ AI-powered file description generator for any GitHub repository using Claude Cod
 Just like Claude Code, install with one command:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/user/clutch/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/michaelsayman/clutch/main/install.sh | bash
 ```
 
-Or install locally:
-
-```bash
-cd /path/to/clutch
-./install.sh
-```
+The installer downloads a pre-built binary for your platform (no Node.js required).
 
 ## Quick Start
 
@@ -66,7 +61,7 @@ Binary installed to: `~/.local/bin/clutch`
 
 ```bash
 # Install
-curl -fsSL https://raw.githubusercontent.com/user/clutch/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/michaelsayman/clutch/main/install.sh | bash
 
 # Initialize a project
 clutch init https://github.com/facebook/react
@@ -114,11 +109,6 @@ jq -s '.' descriptions.jsonl > descriptions.json
 clutch uninstall
 ```
 
-Or via curl:
-```bash
-curl -fsSL https://raw.githubusercontent.com/user/clutch/main/uninstall.sh | bash
-```
-
 This removes:
 - Binary: `~/.local/bin/clutch`
 - Data: `~/.clutch/`
@@ -128,14 +118,21 @@ This removes:
 - **Claude Code CLI** (required) - Install from https://claude.ai/download
 - **Git** (required) - For cloning repositories
 - **curl or wget** (required) - For installation
-- **jq** (optional) - For metadata parsing
-- **bc** (optional) - For progress calculations
 
-## Files
+Node.js is bundled in the binary - no need to install it separately!
 
-- `clutch` - Main CLI (single self-contained bash script)
-- `install.sh` - Curl-able installer (like Claude Code)
-- `uninstall.sh` - Curl-able uninstaller
+## Architecture
+
+Clutch is built with TypeScript and bundled into standalone binaries using `pkg`:
+
+- **Pre-built binaries** for macOS (x64/arm64) and Linux (x64/arm64)
+- **Node.js bundled** inside the binary - no runtime dependencies
+- **Zero config** - just download and run
+
+For developers:
+- `src/` - TypeScript source code
+- `build-binaries.sh` - Build all platform binaries locally
+- `.github/workflows/release.yml` - Automated binary builds on release
 
 Clean and simple, just like Claude Code.
 

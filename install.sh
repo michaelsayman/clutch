@@ -1,12 +1,11 @@
 #!/bin/bash
-# Clutch Installer
+# Clutch Installer - Downloads pre-built binary
 
 set -e
 
-CLUTCH_URL="https://raw.githubusercontent.com/michaelsayman/clutch/main"
-CLUTCH_DIR="$HOME/.clutch"
+GITHUB_REPO="michaelsayman/clutch"
+DOWNLOAD_DIR="$HOME/.clutch/downloads"
 INSTALL_PATH="$HOME/.local/bin/clutch"
-LIB_PATH="$HOME/.local/lib/clutch"
 
 # Colors
 CYAN='\033[0;36m'
@@ -18,94 +17,103 @@ NC='\033[0m'
 
 echo -e "${CYAN}${BOLD}Installing Clutch...${NC}\n"
 
-# Check for Node.js
-if ! command -v node >/dev/null 2>&1; then
-    echo -e "${RED}Error: Node.js is required but not installed${NC}" >&2
-    echo "Install from: https://nodejs.org/" >&2
-    exit 1
-fi
-
-NODE_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
-if [ "$NODE_VERSION" -lt 18 ]; then
-    echo -e "${RED}Error: Node.js 18 or higher is required${NC}" >&2
-    echo "Current version: $(node -v)" >&2
-    echo "Install from: https://nodejs.org/" >&2
-    exit 1
-fi
-
-# Check for Git
-if ! command -v git >/dev/null 2>&1; then
-    echo "Git is required but not installed" >&2
-    echo "Install from: https://git-scm.com/downloads" >&2
-    exit 1
-fi
-
-# Check for Claude Code
-if ! command -v claude >/dev/null 2>&1; then
-    echo -e "${YELLOW}Warning: Claude Code CLI not found${NC}" >&2
-    echo "Clutch requires Claude Code to function." >&2
-    echo -e "Install from: https://claude.ai/download\n" >&2
-    read -p "Continue anyway? [y/N]: " cont
-    [[ ! "$cont" =~ ^[Yy]$ ]] && exit 1
-fi
-
-# Create directories
-mkdir -p "$CLUTCH_DIR"
-mkdir -p "$HOME/.local/bin"
-mkdir -p "$LIB_PATH"
-
-# Install from local or remote
-if [ -f "$(dirname "$0")/package.json" ]; then
-    # Local installation
-    echo "Installing from local directory..."
-
-    # Check if already built
-    if [ ! -d "$(dirname "$0")/dist" ]; then
-        echo "Building Clutch..."
-        cd "$(dirname "$0")"
-        npm install --production
-        npm run build
-        cd - > /dev/null
-    fi
-
-    # Copy built files
-    cp -r "$(dirname "$0")/dist" "$LIB_PATH/"
-    cp "$(dirname "$0")/package.json" "$LIB_PATH/"
-
-    # Copy node_modules (only production dependencies)
-    if [ -d "$(dirname "$0")/node_modules" ]; then
-        cp -r "$(dirname "$0")/node_modules" "$LIB_PATH/"
-    else
-        cd "$LIB_PATH"
-        npm install --production --silent
-        cd - > /dev/null
-    fi
+# Check for curl or wget
+DOWNLOADER=""
+if command -v curl >/dev/null 2>&1; then
+    DOWNLOADER="curl"
+elif command -v wget >/dev/null 2>&1; then
+    DOWNLOADER="wget"
 else
-    # Remote installation
-    echo "Downloading Clutch..."
-
-    # Download and extract
-    temp_dir=$(mktemp -d)
-    git clone --depth 1 https://github.com/michaelsayman/clutch.git "$temp_dir"
-
-    cd "$temp_dir"
-    npm install --production --silent
-    npm run build
-
-    cp -r dist "$LIB_PATH/"
-    cp package.json "$LIB_PATH/"
-    cp -r node_modules "$LIB_PATH/"
-
-    cd - > /dev/null
-    rm -rf "$temp_dir"
+    echo -e "${RED}Error: Either curl or wget is required${NC}" >&2
+    exit 1
 fi
 
-# Create wrapper script
-cat > "$INSTALL_PATH" << 'EOF'
-#!/bin/bash
-NODE_PATH="$HOME/.local/lib/clutch/node_modules" node "$HOME/.local/lib/clutch/dist/index.js" "$@"
-EOF
+# Download function
+download_file() {
+    local url="$1"
+    local output="$2"
 
+    if [ "$DOWNLOADER" = "curl" ]; then
+        if [ -n "$output" ]; then
+            curl -fsSL -o "$output" "$url"
+        else
+            curl -fsSL "$url"
+        fi
+    elif [ "$DOWNLOADER" = "wget" ]; then
+        if [ -n "$output" ]; then
+            wget -q -O "$output" "$url"
+        else
+            wget -q -O - "$url"
+        fi
+    fi
+}
+
+# Detect platform
+case "$(uname -s)" in
+    Darwin) os="darwin" ;;
+    Linux) os="linux" ;;
+    *) echo -e "${RED}Error: Windows is not supported${NC}" >&2; exit 1 ;;
+esac
+
+case "$(uname -m)" in
+    x86_64|amd64) arch="x64" ;;
+    arm64|aarch64) arch="arm64" ;;
+    *) echo -e "${RED}Error: Unsupported architecture: $(uname -m)${NC}" >&2; exit 1 ;;
+esac
+
+platform="${os}-${arch}"
+mkdir -p "$DOWNLOAD_DIR"
+mkdir -p "$HOME/.local/bin"
+
+# Get latest release version
+echo "→ Fetching latest version..."
+version=$(download_file "https://api.github.com/repos/$GITHUB_REPO/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
+
+if [ -z "$version" ]; then
+    echo -e "${RED}Error: Could not fetch latest version${NC}" >&2
+    echo "Please check https://github.com/$GITHUB_REPO/releases" >&2
+    exit 1
+fi
+
+echo "→ Downloading Clutch $version for $platform..."
+
+# Download binary
+binary_url="https://github.com/$GITHUB_REPO/releases/download/$version/clutch-$platform"
+binary_path="$DOWNLOAD_DIR/clutch-$version-$platform"
+
+if ! download_file "$binary_url" "$binary_path"; then
+    echo -e "${RED}Error: Download failed${NC}" >&2
+    echo "Binary not found at: $binary_url" >&2
+    rm -f "$binary_path"
+    exit 1
+fi
+
+# Download and verify checksum
+echo "→ Verifying checksum..."
+manifest_url="https://github.com/$GITHUB_REPO/releases/download/$version/manifest.json"
+manifest_json=$(download_file "$manifest_url" 2>/dev/null || echo "")
+
+if [ -n "$manifest_json" ]; then
+    expected_checksum=$(echo "$manifest_json" | grep -o "\"$platform\"[^}]*\"checksum\"[[:space:]]*:[[:space:]]*\"[a-f0-9]*\"" | grep -o "[a-f0-9]\{64\}")
+
+    if [ -n "$expected_checksum" ]; then
+        if [ "$os" = "darwin" ]; then
+            actual_checksum=$(shasum -a 256 "$binary_path" | cut -d' ' -f1)
+        else
+            actual_checksum=$(sha256sum "$binary_path" | cut -d' ' -f1)
+        fi
+
+        if [ "$actual_checksum" != "$expected_checksum" ]; then
+            echo -e "${RED}Error: Checksum verification failed${NC}" >&2
+            rm -f "$binary_path"
+            exit 1
+        fi
+    fi
+fi
+
+# Install binary
+echo "→ Installing to $INSTALL_PATH..."
+mv "$binary_path" "$INSTALL_PATH"
 chmod +x "$INSTALL_PATH"
 
 # Verify installation

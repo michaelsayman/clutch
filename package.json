@@ -11,7 +11,9 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "start": "node dist/index.js",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "pkg": "npm run build && pkg . --compress Brotli",
+    "pkg:all": "npm run build && pkg . --targets node18-macos-x64,node18-macos-arm64,node18-linux-x64,node18-linux-arm64 --compress Brotli --output dist/bin/clutch"
   },
   "keywords": [
     "cli",
@@ -31,9 +33,20 @@
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "pkg": "^5.8.1"
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "pkg": {
+    "targets": [
+      "node18-macos-x64",
+      "node18-macos-arm64",
+      "node18-linux-x64",
+      "node18-linux-arm64"
+    ],
+    "outputPath": "dist/bin",
+    "assets": []
   }
 }

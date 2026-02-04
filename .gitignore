@@ -4,6 +4,10 @@ dist/
 *.log
 npm-debug.log*
 
+# Built binaries
+clutch-*
+*.sha256
+
 # Project data
 projects/
 repos/
