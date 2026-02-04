@@ -109,8 +109,8 @@ export async function runCommand(projectName?: string) {
   const processFile = async (filePath: string): Promise<void> => {
     console.log(chalk.dim(`  Starting: ${filePath.substring(filePath.lastIndexOf('/') + 1)}`));
     try {
-      // Thorough prompt with exploration
-      const prompt = `Analyze the file at ${filePath} in the repository at ${repoDir}. Use the explore, grep, and read tools to understand how this file relates to other files in the codebase. Provide a thorough, detailed, and elaborate description (MAXIMUM 400 characters) that explains: what it does, its purpose, key functionality, how it connects to other files, its role in the architecture, and any important patterns or relationships. Be comprehensive and use all available context. Return ONLY the description text, nothing else.`;
+      // Focused prompt with targeted exploration
+      const prompt = `Read the file at ${filePath} in repository ${repoDir}. Quickly check its imports/exports and what files reference it. Provide a detailed description (MAXIMUM 400 characters) covering: what it does, its purpose, key functionality, how it connects to other parts of the codebase, and its role. Be thorough but efficient. Return ONLY the description text.`;
 
       const result = await execa('claude', [
         '--dangerously-skip-permissions',
