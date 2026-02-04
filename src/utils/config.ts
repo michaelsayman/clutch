@@ -1,7 +1,7 @@
 import { homedir } from 'os';
 import { join } from 'path';
 
-export const CLUTCH_DIR = process.env.CLUTCH_DIR || join(homedir(), '.clutch');
+export const CLUTCH_DIR = process.env.CLUTCH_DIR || join(homedir(), 'clutch');
 export const PROJECTS_DIR = join(CLUTCH_DIR, 'projects');
 export const REPOS_DIR = join(CLUTCH_DIR, 'repos');
 

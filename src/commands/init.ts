@@ -69,16 +69,28 @@ export async function initCommand(repoUrl: string) {
     locSpinner.succeed(`Total lines: ${totalLoc.toLocaleString()}`);
 
     // Generate context
-    const contextSpinner = ora('Generating project context...').start();
+    console.log(chalk.cyan('→ Generating project context with Claude...'));
+    console.log();
     try {
-      await execa('claude', [
+      const claudeProcess = execa('claude', [
         '--dangerously-skip-permissions',
         '-p',
         `Analyze repository at ${repoDir} and create PROJECT_CONTEXT.md at ${join(projectDir, 'PROJECT_CONTEXT.md')} with: project purpose, architecture, technologies, repo structure, main features. Then append 'SUCCESS' to ${join(projectDir, 'init_log.txt')} and EXIT.`
-      ], { stderr: 'ignore' });
-      contextSpinner.succeed('Context generated');
-    } catch {
-      contextSpinner.warn('Context generation skipped');
+      ]);
+
+      // Stream Claude's output
+      if (claudeProcess.stdout) {
+        for await (const chunk of claudeProcess.stdout) {
+          process.stdout.write(chalk.dim(chunk.toString()));
+        }
+      }
+
+      await claudeProcess;
+      console.log();
+      console.log(chalk.green('✓') + ' Context generated');
+    } catch (error) {
+      console.log();
+      console.log(chalk.yellow('⚠') + ' Context generation skipped (Claude Code not available)');
     }
 
     // Initialize files
@@ -121,24 +133,13 @@ async function checkDirExists(path: string): Promise<boolean> {
 }
 
 async function findFiles(dir: string): Promise<string[]> {
+  // Include EVERYTHING except .git directory
   const { stdout } = await execa('find', [
     dir,
     '-type', 'f',
-    '!', '-path', '*/node_modules/*',
     '!', '-path', '*/.git/*',
-    '!', '-path', '*/dist/*',
-    '!', '-path', '*/build/*',
-    '!', '-path', '*/.next/*',
-    '!', '-path', '*/coverage/*',
-    '!', '-path', '*/__pycache__/*',
-    '!', '-path', '*/.cache/*',
-    '!', '-path', '*/vendor/*',
-    '!', '-name', 'package-lock.json',
-    '!', '-name', 'yarn.lock',
-    '!', '-name', '*.min.js',
-    '!', '-name', '*.map',
-    '!', '-name', '*.log',
   ]);
+
   return stdout.split('\n').filter(Boolean);
 }
 

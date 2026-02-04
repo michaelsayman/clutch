@@ -4,7 +4,7 @@
 set -e
 
 GITHUB_REPO="michaelsayman/clutch"
-DOWNLOAD_DIR="$HOME/.clutch/downloads"
+DOWNLOAD_DIR="$HOME/clutch/downloads"
 INSTALL_PATH="$HOME/.local/bin/clutch"
 
 # Colors

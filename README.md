@@ -44,13 +44,15 @@ clutch help               Show help message
 2. **Process**: Launch parallel Claude Code workers to describe each file (max 400 chars)
 3. **Output**: Get descriptions.jsonl with every file documented
 
-All data lives in `~/.clutch/`:
+All data lives in `~/clutch/` (easy to access!):
 ```
-~/.clutch/
+~/clutch/
 ├── projects/<repo-name>/
 │   ├── metadata.json          # Repo info
 │   ├── PROJECT_CONTEXT.md     # Architecture overview
 │   ├── descriptions.jsonl     # Generated descriptions
+│   ├── all_files.txt          # List of all files found
+│   ├── file_stats.txt         # Line counts per file
 │   └── completed.txt          # Progress tracking
 └── repos/<repo-name>/         # Cloned repository
 ```
@@ -78,6 +80,9 @@ cat ~/.clutch/projects/react/descriptions.jsonl | jq
 # Process another repo
 clutch init https://github.com/vercel/next.js
 clutch run
+
+# Access your data
+open ~/clutch/projects/
 ```
 
 ## Worker Options
@@ -111,7 +116,7 @@ clutch uninstall
 
 This removes:
 - Binary: `~/.local/bin/clutch`
-- Data: `~/.clutch/`
+- Data: `~/clutch/`
 
 ## Requirements
 
